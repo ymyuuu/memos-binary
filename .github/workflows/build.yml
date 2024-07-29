@@ -15,9 +15,18 @@ jobs:
         go-version: 'stable'
         check-latest: true
 
-    - name: Clone Repo
+    - name: Retrieve Latest App Version
+      id: latest_version
       run: |
         export LATEST_APP=$(wget -qO- https://api.github.com/repos/ymyuuu/memos/tags | gawk -F '["v]' '/name/{print "v"$5;exit}')
+        echo "Latest version found: $LATEST_APP"
+
+    - name: Clone Repo
+      run: |
+        if [ -z "$LATEST_APP" ]; then
+          echo "Error: LATEST_APP is empty or not properly set."
+          exit 1
+        fi
         git clone -b $LATEST_APP https://github.com/ymyuuu/memos
         npm install -g pnpm
 

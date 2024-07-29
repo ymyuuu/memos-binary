@@ -15,44 +15,22 @@ jobs:
         go-version: 'stable'
         check-latest: true
 
-    - name: Retrieve Latest App Version
-      id: latest_version
+    - name: Clone Repo and Build
       run: |
-        export LATEST_APP=$(wget -qO- https://api.github.com/repos/ymyuuu/memos/tags | gawk -F '["v]' '/name/{print "v"$5;exit}')
-        echo "Latest version found: $LATEST_APP"
-
-    - name: Clone Repo
-      run: |
-        if [ -z "$LATEST_APP" ]; then
-          echo "Error: LATEST_APP is empty or not properly set."
-          exit 1
-        fi
-        git clone -b $LATEST_APP https://github.com/ymyuuu/memos
-        npm install -g pnpm
-
-    - name: Build binary
-      run: |
+        git clone https://github.com/ymyuuu/memos
         cd memos
-        GOOS=freebsd GOARCH=amd64 CGO_ENABLED=0 go build -o memos ./bin/memos/main.go && rm -f artifact/* && cp memos artifact/memos && cd artifact && tar -czvf ../memos-freebsd-amd64.tar.gz * && cd ..
+        GOOS=freebsd GOARCH=amd64 CGO_ENABLED=0 go build -o memos ./bin/memos/main.go
+        mkdir -p artifact
+        cp memos artifact/memos-freebsd-amd64
+        cd artifact
+        tar -czvf ../memos-freebsd-amd64.tar.gz *
         cd ..
-        
+
     - name: Upload artifact
       uses: actions/upload-artifact@v2
       with:
         name: memos-pre-built
         path: memos/memos-freebsd-amd64.tar.gz
-            
-    - name: Generate release tag
-      id: tag
-      run: echo "release_tag=$(wget -qO- https://api.github.com/repos/ymyuuu/memos/tags | gawk -F '["v]' '/name/{print "v"$5;exit}')" >> $GITHUB_ENV
-
-    - name: Create release
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ steps.tag.outputs.release_tag }}
-        files: memos/memos-freebsd-amd64.tar.gz
 
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@v2
